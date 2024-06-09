@@ -1,0 +1,24 @@
+Original dataset will be used 
+ Shape:   121   145   121   182
+
+
+Elapsed time for dataset A: 4932.93 seconds
+Average time per run for dataset A: 493.29 seconds
+Subsampled dataset will be used 
+ Shape:    60    72    60   182
+
+
+Elapsed time for dataset B: 673.71 seconds
+Average time per run for dataset B: 67.37 seconds
+Residual dataset will be used 
+ Shape:   121   145   121   182
+
+
+Elapsed time for dataset C: 4817.41 seconds
+Average time per run for dataset C: 481.74 seconds
+Subsampled residual dataset will be used 
+ Shape:    60    72    60   182
+
+
+Elapsed time for dataset D: 669.51 seconds
+Average time per run for dataset D: 66.95 seconds

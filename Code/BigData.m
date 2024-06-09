@@ -13,10 +13,62 @@ clc
 %   - residual_dataset : effects regressed out
 %       resid_vol contains 4D data
 
-%load oasis_residual_dataset_subs_10_20150309T105823_97830
+load oasis_residual_dataset_subs_10_20150309T105823_97830
 %load oasis_residual_dataset_subs_05_20150309T105732_19924
 %load oasis_dataset_subs_05_20150309T105732_19924
-load oasis_dataset_subs_10_20150309T105823_97830
+% load oasis_dataset_subs_10_20150309T105823_97830
+
+%%
+% Extract eTIV and CDR values
+eTIV = stats.eTIV;
+CDR = stats.CDR;
+
+% Create a figure
+figure;
+hold on;
+
+% Plot subjects with CDR = 0 (no Alzheimer's)
+no_alzheimer = CDR == 0;
+scatter(find(no_alzheimer), eTIV(no_alzheimer), 'b', 'DisplayName', 'No Alzheimer''s (CDR=0)');
+
+% Plot subjects with CDR = 0.5 (mild Alzheimer's)
+mild_alzheimer = CDR == 0.5;
+scatter(find(mild_alzheimer), eTIV(mild_alzheimer), 'r', 'DisplayName', 'Mild Alzheimer''s (CDR=0.5)');
+
+% Customize the plot
+xlabel('Subject Index');
+ylabel('eTIV');
+title('eTIV Values Colored by CDR');
+legend;
+grid on;
+hold off;
+
+%%
+% Extract Age and CDR values
+Age = stats.Age;
+CDR = stats.CDR;
+
+% Create a figure
+figure;
+hold on;
+
+% Plot subjects with CDR = 0 (no Alzheimer's)
+no_alzheimer = CDR == 0;
+scatter(find(no_alzheimer), Age(no_alzheimer), 'b', 'DisplayName', 'No Alzheimer''s (CDR=0)');
+
+% Plot subjects with CDR = 0.5 (mild Alzheimer's)
+mild_alzheimer = CDR == 0.5;
+scatter(find(mild_alzheimer), Age(mild_alzheimer), 'r', 'DisplayName', 'Mild Alzheimer''s (CDR=0.5)');
+
+% Customize the plot
+xlabel('Subject Index');
+ylabel('Age');
+title('Age Values Colored by CDR');
+legend;
+grid on;
+hold off;
+
+
 
 %%
 selected_volume = vol(:,:,:,50);
@@ -38,119 +90,42 @@ axis equal tight;  % Adjust axis for equal spacing and tight fit
 colormap gray;  % Use gray colormap for better visualization
 colorbar;  % Optional: Display a colorbar
 
+
 %%
-selected_sub = vol(:,:,:,50);
 
-figure(1); 
-montage(selected_sub, []);
-title('DICOM Series (Fully Sampled)');
+% Load the selected volume
+selected_volume = resid_vol(:,:,:,50);
 
+% Determine the middle index for each dimension
+mid_x = round(size(selected_volume, 1) / 2);  % Middle index of the 1st dimension
+mid_y = round(size(selected_volume, 2) / 2);  % Middle index of the 2nd dimension
+mid_z = round(size(selected_volume, 3) / 2);  % Middle index of the 3rd dimension
 
-%% Load data A& reshape data
-img_data = vol;
-% Initialize reshaped data
-[nx, ny, nz, num_subjects] = size(img_data);
-reshaped_data = zeros(nx * ny * nz, num_subjects);
+% Extract slices for transverse (axial), sagittal, and coronal views
+transverse_slice = squeeze(selected_volume(:, :, mid_z));
+sagittal_slice = squeeze(selected_volume(mid_x, :, :));
+coronal_slice = squeeze(selected_volume(:, mid_y, :));
 
-% Reshape data: stack voxel values from 3D to a row in 2D matrix
-for i = 1:num_subjects
-    temp = img_data(:,:,:,i);  % Extract the i-th subject's 3D data
-    reshaped_data(:, i) = temp(:);  % Convert 3D data to a vector and assign to column
-end
-
-% Calculate the mean across the subjects (columns)
-mean_vector = mean(reshaped_data, 2);
-
-% Subtract the mean vector from each column (subject)
-mean_centered_data = reshaped_data - mean_vector;
-
-
-
-%% PCA
-% Form the Matrix A
-A = mean_centered_data;
-% Compute the Covariance Matrix St
-St = (A' * A) / num_subjects;
-% Solve for the eigenvectors and eigenvalues
-[V, Lambda] = eig(St);
-% Sort eigenvalues and eigenvectors in descending order
-[Lambda_sorted, order] = sort(diag(Lambda), 'descend');
-V_sorted = V(:, order);
-
-% Plot eigenvalues (in descending order)
-plot(Lambda_sorted)
-
-% Construct the EigenImages
-eigenimages = A * V_sorted;
-eigenimages = normalize(eigenimages, 1, 'range');
-
-
-% % Normalize EigenImages
-% eigenimages_3d = reshape(eigenimages, [nx,ny,nz,num_subjects]);
-% 
-% selected_volume = eigenimages_3d(:,:,:,50);
-% slice_index = round(size(selected_volume,2) / 2);  % Middle index of the 2nd dimension
-% slice = squeeze(selected_volume(:,slice_index,:,:));
-% max = 10 ;
-% for i= 1:max
-%     slice_index = round(size(selected_volume,2) * (i/max));  % Middle index of the 2nd dimension
-%     slice = squeeze(selected_volume(:,slice_index,:,:));
-%     figure;  % Create a new figure window
-%     imagesc(slice);  % Display the slice as a scaled image
-%     axis equal tight;  % Adjust axis for equal spacing and tight fit
-%     colormap gray;  % Use gray colormap for better visualization
-%     colorbar;  % Optional: Display a colorbar
-% end
-% 
-% figure;  % Create a new figure window
-% imagesc(slice);  % Display the slice as a scaled image
-% axis equal tight;  % Adjust axis for equal spacing and tight fit
-% colormap gray;  % Use gray colormap for better visualization
-% colorbar;  % Optional: Display a colorbar
-
-% Dimension Reduction with r
-r = 181;  % Number of principal components to retain (max 181
-P_pca = V_sorted(:, :);  % Principal components matrix
-
-x_pca = A * P_pca;
-
-%% LDA
-
-% Assuming mp is the number of patients and mc is the number of controls
-m_p = 60;
-m_c = num_subjects - m_p;
-patients_data = x_pca(:, 1:m_p);
-controls_data = x_pca(:, m_p+1:end);
-
-mean_patients = mean(patients_data, 2);
-mean_controls = mean(controls_data, 2);
-mean_overall = mean(x_pca, 2);
-
-% Compute within-class scatter matrix Sw
-Sw_patients = (patients_data - mean_patients) * (patients_data - mean_patients)';
-Sw_controls = (controls_data - mean_controls) * (controls_data - mean_controls)';
-Sw = Sw_patients + Sw_controls;
-
-% Compute between-class scatter matrix Sb
-Sb_patients = m_p * (mean_patients - mean_overall) * (mean_patients - mean_overall)';
-Sb_controls = m_c * (mean_controls - mean_overall) * (mean_controls - mean_overall)';
-Sb = Sb_patients + Sb_controls;
-
-% Solve the generalized eigenvalue problem for discriminant directions
-[V_lda, D_lda] = eig(Sb, Sw);
-[~, order_lda] = sort(diag(D_lda), 'descend');
-V_lda_sorted = V_lda(:, order_lda);
-
-% Project the data onto the new LDA space
-lda_projected_data = V_lda_sorted(:, 1)'; % Only the first discriminant direction
-
-% Plot the LDA results
+% Plot the transverse (axial) slice
 figure;
-scatter(lda_projected_data * patients_data, zeros(1, m_p), 'r', 'filled');
-hold on;
-scatter(lda_projected_data * controls_data, ones(1, m_c), 'b', 'filled');
-xlabel('LDA Projection');
-ylabel('Class');
-legend({'Patients', 'Controls'});
-title('LDA Projection of Data');
-hold off;
+imagesc(transverse_slice);
+axis equal tight;
+colormap gray;
+colorbar;
+title('Transverse Slice');
+
+% Plot the sagittal slice
+figure;
+imagesc(squeeze(sagittal_slice)');
+axis equal tight;
+colormap gray;
+colorbar;
+title('Sagittal Slice');
+
+% Plot the coronal slice
+figure;
+imagesc(squeeze(coronal_slice)');
+axis equal tight;
+colormap gray;
+colorbar;
+title('Coronal Slice');
